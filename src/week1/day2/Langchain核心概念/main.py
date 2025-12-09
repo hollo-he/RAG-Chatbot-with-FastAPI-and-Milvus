@@ -3,17 +3,26 @@ from typing import TypedDict
 
 from dotenv import load_dotenv
 from langchain.agents.middleware import wrap_model_call, ModelRequest, ModelResponse, wrap_tool_call, dynamic_prompt
+from langchain.agents.structured_output import ToolStrategy
 # from langchain_community.chat_models import ChatZhipuAI
 from langchain.tools import tool
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
+# 环境变量导入
 load_dotenv()
 
 api_key = os.getenv("ZAI_API_KEY")
 api_base = os.getenv("ZAI_API_BASE")
+
+
+class ContactInfo(BaseModel):
+    name: str
+    email: str
+    phone: str
 
 class Context(TypedDict):
     user_role:str
@@ -26,7 +35,7 @@ zai_model = ChatOpenAI(
 )
 ollama_model = ChatOllama(
     model="qwen3:0.6b",
-    # base_url="http",
+    # base_url="http://192.168.1.177:11434",
     max_tokens=1000,
 )
 
@@ -79,12 +88,14 @@ agent = create_agent(
     tools=[search, get_weather],
     middleware=[dynamic_model, handle_tool_errors,user_role_prompt],
     context_schema=Context,
-    # system_prompt="你是极品猫娘"
-)
+    response_format=ToolStrategy(ContactInfo)
 
-res = agent.invoke({
-    "messages": [{"role":"user","content":"介绍你自己"}]},
-    context={"user_role":"养生"}
 )
+#
+# res = agent.invoke({
+#     "messages": [{"role":"user","content":"介绍你自己,并且Extract contact info from:John Doe, john@example.com, (555) 123-4567"}]},
+#     context={"user_role":"养生"}
+# )
+#
+# print(res)
 
-print(res)
